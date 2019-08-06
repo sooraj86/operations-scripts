@@ -1,0 +1,208 @@
+*******************************************************
+Starting Hadoop and Verifying it is working properly
+*******************************************************
+Step 0: To Reset Cluster
+------------------------
+Please Note : This is a custom script build for you which will reset all the configuration settings to default values. If your Hadoop is breaking then run this command and start again from step 1
+
+$ sudo reset_cluster.sh
+
+Note - Hadoop package files are already downloaded in this Virtual Machine , Start from step1 for setup
+
+Step 1: Format the NameNode
+----------------------------
+$ sudo -u hdfs hdfs namenode -format
+
+Step 2: Start HDFS
+----------------------------
+$ for x in `cd /etc/init.d ; ls hadoop-hdfs-*` ; do sudo service $x start ; done
+
+To verify services have started, you can check the web console http://hadoop:50070/   for viewing your Distributed File System (DFS0.
+of DataNodes, and logs. In this pseudo-distributed configuration, you should see one live DataNode named localhost.
+
+Step 3: Create the /tmp Directory
+---------------------------------
+1. Create a new /tmp directory and set permissions: 
+
+$ sudo -u hdfs hadoop fs -mkdir /tmp
+$ sudo -u hdfs hadoop fs -chmod -R 1777 /tmp
+
+Step 4: Create Staging and Log Directories
+--------------------------------------------
+Create the staging directory and set permissions:
+
+$ sudo -u hdfs hadoop fs -mkdir /tmp/hadoop-yarn/staging
+$ sudo -u hdfs hadoop fs -chmod -R 1777 /tmp/hadoop-yarn/staging
+
+Create the done_intermediate directory under the staging directory and set permissions:
+
+$ sudo -u hdfs hadoop fs -mkdir /tmp/hadoop-yarn/staging/history/done_intermediate
+$ sudo -u hdfs hadoop fs -chmod -R 1777 /tmp/hadoop-yarn/staging/history/done_intermediate
+
+Change ownership on the staging directory and subdirectory:
+
+$ sudo -u hdfs hadoop fs -chown -R mapred:mapred /tmp/hadoop-yarn/staging
+
+Create the /var/log/hadoop-yarn directory and set ownership:
+
+$ sudo -u hdfs hadoop fs -mkdir /var/log/hadoop-yarn
+$ sudo -u hdfs hadoop fs -chown yarn:mapred /var/log/hadoop-yarn
+
+Step 5: Verify the HDFS File Structure:
+--------------------------------------------
+Run the following command:
+
+$ sudo -u hdfs hadoop fs -ls -R /
+
+You should see the following directory structure:
+
+drwxrwxrwt – hdfs supergroup 0 2015-12-18 15:31 /tmp drwxr-xr-x – hdfs supergroup 0 2015-12-18 15:31 /tmp/hadoop-yarn
+drwxrwxrwt – mapred mapred 0 2015-12-18 15:31 /tmp/hadoop-yarn/staging drwxr-xr-x – mapred mapred 0 2015-12-18 15:31 /tmp/hadoop-yarn/staging/history drwxrwxrwt – mapred mapred 0 2015-12-18 15:31 /tmp/hadoop-yarn/staging/history/done_intermediate
+drwxr-xr-x – hdfs supergroup 0 2015-12-18 15:31 /var drwxr-xr-x – hdfs supergroup 0 2015-12-18 15:31 /var/log
+drwxr-xr-x - yarn mapred 0 2015-12-18 15:31 /var/log/hadoop-yarn
+
+Step 6: Start YARN
+------------------
+$ sudo service hadoop-yarn-resourcemanager start 
+
+$ sudo service hadoop-yarn-nodemanager start
+$ sudo service hadoop-mapreduce-historyserver start
+
+Step 7: Create User Directories
+--------------------------------------------
+Create a home directory for each MapReduce user. It is best to do this on the NameNode.
+Running an example application with YARN
+
+1. Create a home directory on HDFS for the user who will be running the job (for example, training):
+-----------------------------------------------------------------------------------------------------
+$ sudo -u hdfs hadoop fs -mkdir /user/training
+$ sudo -u hdfs hadoop fs -chown training /user/training
+
+Do the following steps as the user training.
+
+2. Make a directory in HDFS called input and copy some XML files into it by running the following commands in pseudo-distributed mode:
+--------------------------------------------------------------------------------------------------------------------------------------
+$ hadoop fs -mkdir input
+$ hadoop fs -put /etc/hadoop/conf/*.xml input 
+$ hadoop fs -ls input
+
+Found 4 items:
+-rw-r--r-- 1 training supergroup 1458 2015-12-18 12:21 input/core-site.xml -rw-r--r-- 1 training supergroup 1875 2015-12-18 12:21 input/hdfs-site.xml -rw-r--r-- 1 training supergroup 1549 2015-12-18 12:21 input/mapred-site.xml -rw-r--r-- 1 training supergroup 2361 2015-12-18 12:21 input/yarn-site.xml
+
+3. Set HADOOP_MAPRED_HOME for user training:
+---------------------------------------------
+$ export HADOOP_MAPRED_HOME=/usr/lib/hadoop-mapreduce
+
+4. Run an example Hadoop job to grep with a regular expression in your input data.
+----------------------------------------------------------------------------------
+$ hadoop jar /usr/lib/hadoop-mapreduce/hadoop-mapreduce-examples.jar grep input output23 'dfs[a-z.]+'
+
+5. After the job completes, you can find the output in the HDFS directory named output23 because you specified that output directory to Hadoop.
+-----------------------------------------------------------------------------------------------------------------------------------------------
+$ hadoop fs -ls 
+
+Found 2 items
+drwxr-xr-x – training supergroup 0 2015-12-18 18:36 /user/training/input drwxr-xr-x – training supergroup 0 2015-12-18 18:38 /user/training/output23
+You can see that there is a new directory called output23.
+
+6. List the output files.
+-------------------------
+$ hadoop fs -ls output23 
+
+Found 2 items
+-rw-r--r-- 1 training supergroup 0 2015-12-18 10:33 /user/training/output23/_SUCCESS -rw-r--r-- 1 training supergroup 150 2015-12-18 10:33 /user/training/output23/part-r-00000
+
+7. Read the results in the output file.
+---------------------------------------
+$ hadoop fs -cat output23/part-r-00000 | head 
+
+You will see below output :
+
+ dfs.safemode.min.datanodes
+1 dfs.safemode.extension
+1 dfs.replication
+1 dfs.namenode.name.dir
+1 dfs.namenode.checkpoint.dir
+1 dfs.datanode.data.dir
+
+
+*******************************************************
+Accessing HDFS from Command
+*******************************************************
+
+This exercise is just to you familiar with HDFS. Run the following commands:
+Command 1: List the files in the user/training directory
+
+$ hadoop fs -ls /
+
+Command 2: Push a file to HDFS
+
+$ hadoop fs -put test.txt /user/training/test.txt
+
+Command 4: View the contents of the file
+
+$ hadoop fs -cat /user/training/test.txt
+
+*******************************************************
+Install Sqoop in your system.
+*******************************************************
+
+$ sudo yum install sqoop
+
+*******************************************************
+Install pig in your system.
+*******************************************************
+$ sudo yum install pig
+
+*******************************************************
+Install hive in your system.
+*******************************************************
+$ sudo yum install hive
+
+*******************************************************
+Install Hbase in your system.
+*******************************************************
+sudo yum install hbase
+
+*******************************************************
+Install Flume in your system.
+*******************************************************
+sudo yum install flume-ng
+
+*******************************************************
+Install Spark and scala in your system.
+*******************************************************
+--------------
+Install Scala
+--------------
+
+1. wget http://www.scala-lang.org/files/archive/scala-2.10.1.tgz
+
+2. tar xvf scala-2.10.1.tgz
+
+3. sudo mv scala-2.10.1 /usr/lib
+
+4. sudo ln -s /usr/lib/scala-2.10.1 /usr/lib/scala
+
+5. export PATH=$PATH:/usr/lib/scala/bin
+
+scala -version
+
+--------------------
+Install Apache Spark
+--------------------
+1. wget http://d3kbcqa49mib13.cloudfront.net/spark-2.0.0-bin-hadoop2.7.tgz
+
+2. tar xvf spark-2.0.0-bin-hadoop2.7.tgz
+
+3. sudo mkdir /usr/local/spark
+
+4. sudo cp -r spark-2.0.0-bin-hadoop2.7/* /usr/local/spark
+
+5. export SPARK_EXAMPLES_JAR=/usr/local/spark/examples/jars/spark-examples_2.11-2.0.0.jar
+
+6. PATH=$PATH:$HOME/bin:/usr/local/spark/bin
+
+7.  source ~/.bash_profile
+
+8.  spark-shell
